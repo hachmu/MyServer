@@ -33,38 +33,19 @@ public class MyServer extends Server {
     int clientCounter = 0;
     String hr = "\n----------------------------------";
 
-    /*
-    String description = """
-    Eine Liste aller validen Befehle.
-    Tipp: Kombiniere "HELP" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.
-    Syntax: "HELP" / "HELP BEFEHL"
-    """;
-    */
-    //Command nick = new Command("Ändert den Name, unter dem andere Nutzer deine Nachrichten erhalten.\nSyntax: \"NICK NEUER_NICKNAME\"");
-    /*
-    String description = """
-    Ändert den Namen, unter dem andere Nutzer deine Nachrichten erhalten.
-    Syntax: "NICK NEUER_NICKNAME"
-    """;
-    */
-    //Command privmsg = new Command("Sendet eine Nachricht an eine bestimmte Zielperson.\nSyntax: \"PRIVMSG ZIEL :NACHRICHT\"");
-    /*
-    String description = """
-    Sendet eine Nachricht an eine bestimmte Zielperson.
-    Syntax: "PRIVMSG ZIEL :NACHRICHT"
-    """;
-    */
-    //Command join = new Command("Coming soon!");
-    //Command ping = new Command("Gibt deinen aktuellen Ping zurück...oder?\nSyntax: \"PING\"");
-    /*
-    String description = """
-    Gibt deinen aktuellen Ping zurück...oder?
-    Syntax: "PING"
-    """;
-    */
+    List<Command> lCommands = new List<Command>();
 
     public MyServer() {
         super(1025);
+        loadCommands(lCommands);
+    }
+
+    private void loadCommands(List<Command> commands) {
+        commands.append(new HelpCommand());
+        commands.append(new NickCommand());
+        commands.append(new PrivMsgCommand());
+        commands.append(new JoinCommand());
+        commands.append(new PingCommand());
     }
 
     public void processNewConnection(String pClientIP, int pClientPort) {
@@ -114,19 +95,19 @@ public class MyServer extends Server {
                         break;
                     case "nick":
                         client.state = "";
-                        CMDnick(args, client);
+                        NickCommand.execute(args, client, this);
                         break;
                     case "privmsg":
                         client.state = "";
-                        CMDprivmsg(args, client);
+                        PrivMsgCommand.execute(args, client, this);
                         break;
                     case "join":
                         client.state = "";
-                        CMDjoin(args, client);
+                        JoinCommand.execute(args, client, this);
                         break;
                     case "ping":
                         client.state = ""; 
-                        CMDping(args, client);
+                        PingCommand.execute(args, client, this);
                         break;
                     default:
                         send(client.ip, client.port, "Es existiert kein Befehl mit dieser Nummer.");
@@ -159,98 +140,6 @@ public class MyServer extends Server {
         mutex.release(); // needs to be executed at the very end
     }
 
-    public void CMDhelp(String args, SClient client) {
-        System.err.println("\"HELP\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
-        switch(args.toLowerCase()) {
-            case "help":
-                send(client.ip, client.port, "Eine Liste aller validen Befehle.\nTipp: Kombiniere \"HELP\" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.\nSyntax: \"HELP\" / \"HELP BEFEHL\"");
-                break;
-            case "nick":
-                send(client.ip, client.port, "Ändert den Name, unter dem andere Nutzer deine Nachrichten erhalten.\nSyntax: \"NICK NEUER_NICKNAME\"");
-                break;
-            case "privmsg":
-                send(client.ip, client.port, "Sendet eine Nachricht an eine bestimmte Zielperson.\nSyntax: \"PRIVMSG ZIEL :NACHRICHT\"");
-                break;
-            case "join":
-                send(client.ip, client.port, "Coming soon!");
-                break;
-            case "ping":
-                send(client.ip, client.port, "Gibt deinen aktuellen Ping zurück...oder?\nSyntax: \"PING\"");
-                break;
-            case "":
-                client.state = "inHelpMenu";
-                String listCommands = "\nNr. | Befehl\n----------------\n0   | \"HELP\"\n1   | \"NICK\"\n2   | \"PRIVMSG\"\n3   | \"JOIN\"\n4   | \"PING\"\n\nAntworte mit der entsprechenden Nummer für eine kurze Erklärung.\nSyntax: \"HELP\" / \"HELP BEFEHL\"";
-                /*
-                String listCommands =  """
-
-                Nr. | Befehl
-                ------------------------
-                0   | "HELP"
-                1   | "NICK"
-                2   | "PRIVMSG"
-                3   | "JOIN"
-                4   | "PING"
-
-                Antworte mit der entprechenden Nummer für eine kurze Erklärung.
-                """;
-                */
-                send(client.ip, client.port, listCommands);
-                break;
-            default:
-                send(client.ip, client.port, "\"" + args + "\" ist kein valider Befehl. Benutze \"HELP\" für eine Liste aller valider Befehle.");
-                break;
-        }
-        return;
-    }
-
-    public void CMDnick(String args, SClient client) {
-        System.err.println("\"NICK\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
-        if(args != null && !args.isEmpty()) {
-            client.nick = args;
-            System.err.println("Neuer Nickname festgelegt: " + client.nick);
-            send(client.ip, client.port, "Nickname geändert zu: \"" + client.nick + "\"");
-        } else {
-            send(client.ip, client.port, "Aktueller Nickname: \"" + client.nick + "\"");
-        }
-        return;
-    }
-
-    public void CMDprivmsg(String args, SClient client) {
-        String ziel = args.substring(0, args.indexOf(" "));
-        SClient zielClient = getSClientByNick(ziel);
-        String pm = args.substring(args.indexOf(":")+1);
-        // System.err.println("\"PRIVMSG\"-Befehl aufgerufen:\nIP: " + client.ip 
-        //                 + "\nPort: " + client.port 
-        //                 + "\nID: " + client.id
-        //                 + "\nNickname: \"" + client.nick 
-        //                 + "\"\nZiel-IP: " + zielClient.ip 
-        //                 + "\nZiel-Port: " + zielClient.port 
-        //                 + "\nZiel-ID: " + zielClient.id
-        //                 + "\nZiel-Nickname: \"" + zielClient.nick 
-        //                 + "\"\nNachricht: \"" + pm + "\"" + hr);
-        if(zielClient == null) {
-            send(client.ip, client.port, "Nutzer \"" + ziel + "\" nicht gefunden. Achte auf die Groß-/Kleinschreibung!");
-            return;
-        }
-        send(zielClient.ip, zielClient.port, client.nick + " --> " + zielClient.nick + ": " + pm);
-        send(client.ip, client.port, client.nick + " --> " + zielClient.nick + ": " + pm);
-        return;
-    }
-
-    public void CMDjoin(String args, SClient client) {
-        // System.err.println("\"JOIN\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
-        // send(client.ip, client.port, "Coming soon!");
-        // return;
-
-        
-    }
-
-    public void CMDping(String args, SClient client) {
-        System.err.println("\"PING\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
-        send(client.ip, client.port, "PONG 69ms");
-        return;
-    }
-
     private SClient findOrCreateSClient(String pIP, int pPort) {
         for(lClients.toFirst(); lClients.hasAccess(); lClients.next()) {
             if(lClients.getContent().ip.equals(pIP) && lClients.getContent().port == pPort) {
@@ -261,17 +150,8 @@ public class MyServer extends Server {
         lClients.append(client);
         return client;
     }
-
-    // private SClient getSClient(String pIP, int pPort) {
-    //     for(lClients.toFirst(); lClients.hasAccess(); lClients.next()) {
-    //         if(lClients.getContent().ip.equals(pIP) && lClients.getContent().port == pPort) {
-    //             return lClients.getContent();
-    //         }
-    //     }
-    //     return null;
-    // }
     
-    private SClient getSClientByNick(String nick) {
+    public SClient getSClientByNick(String nick) {
         for(lClients.toFirst(); lClients.hasAccess(); lClients.next()) {
             if(lClients.getContent().nick.equals(nick)) {
                 return lClients.getContent();

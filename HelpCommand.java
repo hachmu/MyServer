@@ -1,7 +1,13 @@
 public class HelpCommand extends Command {
-    private static String description = "Eine Liste aller validen Befehle.\nTipp: Kombiniere \"HELP\" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.\nSyntax: \"HELP\" / \"HELP BEFEHL\""; 
+    private static final int id = 0;
+    private static final String token = "HELP";
+    private static String description = "Eine Liste aller validen Befehle.\nTipp: Kombiniere \"HELP\" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.\nSyntax: \"HELP\" / \"HELP BEFEHL\"";
 
-    public static void execute(String args, SClient client, MyServer server) {
+    public HelpCommand() {
+        super(id, token, description);
+    }
+
+    public void execute(String args, SClient client, MyServer server) {
         System.err.println("\"HELP\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
         switch(args.toLowerCase()) {
             case "help":
