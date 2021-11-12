@@ -1,27 +1,7 @@
 import java.util.concurrent.Semaphore;
 
 public class MyServer extends Server {
-    public static void main(String[] args) {
-        MyServer server = new MyServer();
-        MyClient client = new MyClient();
-    }
     private Semaphore mutex = new Semaphore(1);
-    
-    private class SClient {
-        public String ip;
-        public int port;
-        public String nick;
-        public int id;
-        public String state = "";
-        
-        public SClient(String pIP, int pPort, int pID) {
-            ip = pIP;
-            port = pPort;
-            id = pID;
-            nick = "User" + id;
-            lClients.append(this);
-        }
-    }
     
     private class Chatroom {
         public String name;
@@ -34,13 +14,6 @@ public class MyServer extends Server {
         }
     }
     
-    private class Command {
-        public String description;
-        
-        public Command(String pDescription) {
-            description = pDescription;
-        }
-    }
 
     /*
         TODO: 
@@ -59,7 +32,7 @@ public class MyServer extends Server {
     List<Chatroom> lChatrooms = new List<Chatroom>();
     int clientCounter = 0;
     String hr = "\n----------------------------------";
-    Command help = new Command("Eine Liste aller validen Befehle.\nTipp: Kombiniere \"HELP\" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.\nSyntax: \"HELP\" / \"HELP BEFEHL\"");
+
     /*
     String description = """
     Eine Liste aller validen Befehle.
@@ -67,22 +40,22 @@ public class MyServer extends Server {
     Syntax: "HELP" / "HELP BEFEHL"
     """;
     */
-    Command nick = new Command("Ändert den Name, unter dem andere Nutzer deine Nachrichten erhalten.\nSyntax: \"NICK NEUER_NICKNAME\"");
+    //Command nick = new Command("Ändert den Name, unter dem andere Nutzer deine Nachrichten erhalten.\nSyntax: \"NICK NEUER_NICKNAME\"");
     /*
     String description = """
     Ändert den Namen, unter dem andere Nutzer deine Nachrichten erhalten.
     Syntax: "NICK NEUER_NICKNAME"
     """;
     */
-    Command privmsg = new Command("Sendet eine Nachricht an eine bestimmte Zielperson.\nSyntax: \"PRIVMSG ZIEL :NACHRICHT\"");
+    //Command privmsg = new Command("Sendet eine Nachricht an eine bestimmte Zielperson.\nSyntax: \"PRIVMSG ZIEL :NACHRICHT\"");
     /*
     String description = """
     Sendet eine Nachricht an eine bestimmte Zielperson.
     Syntax: "PRIVMSG ZIEL :NACHRICHT"
     """;
     */
-    Command join = new Command("Coming soon!");
-    Command ping = new Command("Gibt deinen aktuellen Ping zurück...oder?\nSyntax: \"PING\"");
+    //Command join = new Command("Coming soon!");
+    //Command ping = new Command("Gibt deinen aktuellen Ping zurück...oder?\nSyntax: \"PING\"");
     /*
     String description = """
     Gibt deinen aktuellen Ping zurück...oder?
@@ -121,23 +94,23 @@ public class MyServer extends Server {
             case "inHelpMenu":
                 switch(cmd) {
                     case "0":
-                        send(client.ip, client.port, help.description);
+                        send(client.ip, client.port, HelpCommand.getDescription());
                         break;
                     case "1":
-                        send(client.ip, client.port, nick.description);
+                        send(client.ip, client.port, NickCommand.getDescription());
                         break;
                     case "2":
-                        send(client.ip, client.port, privmsg.description);
+                        send(client.ip, client.port, PrivMsgCommand.getDescription());
                         break;
                     case "3":
-                        send(client.ip, client.port, join.description);
+                        send(client.ip, client.port, JoinCommand.getDescription());
                         break;
                     case "4":
-                        send(client.ip, client.port, ping.description);
+                        send(client.ip, client.port, PingCommand.getDescription());
                         break;
                     case "help":
                         client.state = "";
-                        CMDhelp(args, client);
+                        HelpCommand.execute(args, client, this);
                         break;
                     case "nick":
                         client.state = "";
@@ -285,6 +258,7 @@ public class MyServer extends Server {
             }
         }
         SClient client = new SClient(pIP, pPort, ++clientCounter);
+        lClients.append(client);
         return client;
     }
 
