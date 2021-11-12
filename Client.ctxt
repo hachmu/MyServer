@@ -1,0 +1,14 @@
+#BlueJ class context
+comment0.target=Client
+comment0.text=\n\ <p>\n\ Materialien\ zu\ den\ zentralen\ NRW-Abiturpruefungen\ im\ Fach\ Informatik\ ab\ 2018\n\ </p>\n\ <p>\n\ Klasse\ Client\n\ </p>\n\ <p>\n\ Objekte\ von\ Unterklassen\ der\ abstrakten\ Klasse\ Client\ ermoeglichen\n\ Netzwerkverbindungen\ zu\ einem\ Server\ mittels\ TCP/IP-Protokoll.\ Nach\n\ Verbindungsaufbau\ koennen\ Zeichenketten\ (Strings)\ zum\ Server\ gesendet\ und\ von\n\ diesem\ empfangen\ werden,\ wobei\ der\ Nachrichtenempfang\ nebenlaeufig\ geschieht.\ \n\ Zur\ Vereinfachung\ finden\ Nachrichtenversand\ und\ -empfang\ zeilenweise\ statt,\n\ d.\ h.,\ beim\ Senden\ einer\ Zeichenkette\ wird\ ein\ Zeilentrenner\ ergaenzt\ und\ beim\n\ Empfang\ wird\ dieser\ entfernt.\ Jede\ empfangene\ Nachricht\ wird\ einer\n\ Ereignisbehandlungsmethode\ uebergeben,\ die\ in\ Unterklassen\ implementiert\ werden\n\ muss.\ Es\ findet\ nur\ eine\ rudimentaere\ Fehlerbehandlung\ statt,\ so\ dass\ z.B.\n\ Verbindungsabbrueche\ nicht\ zu\ einem\ Programmabbruch\ fuehren.\ Eine\ einmal\n\ unterbrochene\ oder\ getrennte\ Verbindung\ kann\ nicht\ reaktiviert\ werden.\n\ </p>\n\ \n\ @author\ Qualitaets-\ und\ UnterstuetzungsAgentur\ -\ Landesinstitut\ fuer\ Schule\n\ @version\ 30.08.2016\n
+comment1.params=pServerIP\ pServerPort
+comment1.target=Client(java.lang.String,\ int)
+comment2.params=
+comment2.target=boolean\ isConnected()
+comment3.params=pMessage
+comment3.target=void\ send(java.lang.String)
+comment4.params=
+comment4.target=void\ close()
+comment5.params=pMessage
+comment5.target=void\ processMessage(java.lang.String)
+numComments=6

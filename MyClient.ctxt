@@ -1,0 +1,9 @@
+#BlueJ class context
+comment0.target=MyClient
+comment1.params=
+comment1.target=MyClient()
+comment2.params=pMessage
+comment2.target=void\ processMessage(java.lang.String)
+comment3.params=
+comment3.target=void\ scanner()
+numComments=4
