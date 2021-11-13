@@ -1,20 +1,30 @@
 #BlueJ class context
 comment0.target=MyServer
-comment1.params=
-comment1.target=MyServer()
-comment2.params=pClientIP\ pClientPort
-comment2.target=void\ processNewConnection(java.lang.String,\ int)
+comment1.params=args
+comment1.target=void\ main(java.lang.String[])
+comment10.params=args\ client
+comment10.target=void\ CMDping(java.lang.String,\ MyServer.SClient)
+comment11.params=pIP\ pPort
+comment11.target=MyServer.SClient\ findOrCreateSClient(java.lang.String,\ int)
+comment12.params=nick
+comment12.target=MyServer.SClient\ getSClientByNick(java.lang.String)
+comment13.params=pClientIP\ pClientPort\ pMessage
+comment13.target=void\ send(java.lang.String,\ int,\ java.lang.String)
+comment2.params=
+comment2.target=MyServer()
+comment2.text=\n\ \ \ \ String\ description\ \=\ """\n\ \ \ \ Gibt\ deinen\ aktuellen\ Ping\ zur\u00FCck...oder?\n\ \ \ \ Syntax\:\ "PING"\n\ \ \ \ """;\n
 comment3.params=pClientIP\ pClientPort
-comment3.target=void\ processClosingConnection(java.lang.String,\ int)
-comment4.params=pClientIP\ pClientPort\ pMessage
-comment4.target=void\ processMessage(java.lang.String,\ int,\ java.lang.String)
-comment4.text=\n\ \ \ \ \ \ \ \ TODO\:\ \n\ \ \ \ \ \ \ \ +\ Den\ HELP-Befehl\ mit\ anderen\ kombinierbar\ machen.\n\ \ \ \ \ \ \ \ -\ inMenu\ an\ entprechenden\ Stellen\ auf\ false\ setzen.\n\ \ \ \ \ \ \ \ -\ Wenn\ \u00FCberfl\u00FCssige\ Parameterwerte\ nach\ einem\ Befehl\ stehen,\ nicht\ ignorieren,\ sondern\ "Error"-Message\ zur\u00FCcksenden.\n\ \ \ \ \ \ \ \ -\ Wenn\ ung\u00FCltige\ Parameterwerte\ (z.B.\ einen\ nicht\ existenten\ Zielclient\ bei\ PRIVMSG),\ nicht\ ignorieren\ und\ nichts\ tun,\ sondern\ "Error"-Message\ zur\u00FCcksenden.\n\ \ \ \ \ \ \ \ -\ Ganzen\ Code\ auf\ NullPointer-Exceptions\ vorbereiten\ (if(x\ \=\=\ null)\ {...}).\n\ \ \ \ \ \ \ \ -\ "SCRTMSG"-Befehl.\n
-comment5.params=pIP\ pPort
-comment5.target=MyServer.SClient\ findOrCreateSClient(java.lang.String,\ int)
-comment6.params=pIP\ pPort
-comment6.target=MyServer.SClient\ getSClient(java.lang.String,\ int)
-comment7.params=nick
-comment7.target=MyServer.SClient\ getSClientByNick(java.lang.String)
-comment8.params=pClientIP\ pClientPort\ pMessage
-comment8.target=void\ send(java.lang.String,\ int,\ java.lang.String)
-numComments=9
+comment3.target=void\ processNewConnection(java.lang.String,\ int)
+comment4.params=pClientIP\ pClientPort
+comment4.target=void\ processClosingConnection(java.lang.String,\ int)
+comment5.params=pClientIP\ pClientPort\ pMessage
+comment5.target=void\ processMessage(java.lang.String,\ int,\ java.lang.String)
+comment6.params=args\ client
+comment6.target=void\ CMDhelp(java.lang.String,\ MyServer.SClient)
+comment7.params=args\ client
+comment7.target=void\ CMDnick(java.lang.String,\ MyServer.SClient)
+comment8.params=args\ client
+comment8.target=void\ CMDprivmsg(java.lang.String,\ MyServer.SClient)
+comment9.params=args\ client
+comment9.target=void\ CMDjoin(java.lang.String,\ MyServer.SClient)
+numComments=14
