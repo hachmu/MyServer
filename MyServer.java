@@ -1,4 +1,7 @@
+import java.text.ParseException;
 import java.util.concurrent.Semaphore;
+
+import javax.swing.table.DefaultTableCellRenderer;
 
 public class MyServer extends Server {
     public static void main(String[] args) {
@@ -26,10 +29,12 @@ public class MyServer extends Server {
     
     private class Chatroom {
         public String name;
+        public String kind; // "private" OR "public", more might be added later.
         public List<SClient> lClientsInRoom = new List<SClient>();
         
-        public Chatroom(String pName) {
+        public Chatroom(String pName, String pKind) {
             name = pName;
+            kind = pKind;
         }
 
         public void sendToChatroom(String pMessage) {
@@ -69,7 +74,6 @@ public class MyServer extends Server {
 
     List<SClient> lClients = new List<SClient>();
     List<Chatroom> lChatrooms = new List<Chatroom>();
-    List<Chatroom> lPublicChatrooms = new List<Chatroom>();
     int clientCounter = 0;
     String hr = "\n----------------------------------";
     Command help = new Command("Eine Liste aller validen Befehle.\nTipp: Kombiniere \"HELP\" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.\nSyntax: \"HELP\" / \"HELP BEFEHL\"");
@@ -125,9 +129,8 @@ public class MyServer extends Server {
     public MyServer() {
         super(1025);
         // XXX Per open() besser.
-        Chatroom lobby = new Chatroom("Lobby");
+        Chatroom lobby = new Chatroom("Lobby", "public");
         lChatrooms.append(lobby);
-        lPublicChatrooms.append(lobby);
     }
 
     public void processNewConnection(String pClientIP, int pClientPort) {
@@ -180,6 +183,9 @@ public class MyServer extends Server {
                     case "4":
                         send(client.ip, client.port, ping.description);
                         break;
+                    case "5":
+                        send(client.ip, client.port, open.description);
+                        break;
                     case "help":
                         client.state = "";
                         CMDhelp(args, client);
@@ -199,6 +205,10 @@ public class MyServer extends Server {
                     case "ping":
                         client.state = ""; 
                         CMDping(args, client);
+                        break;
+                    case "open":
+                        client.state = ""; 
+                        CMDopen(args, client);
                         break;
                     default:
                         send(client.ip, client.port, "Es existiert kein Befehl mit dieser Nummer.");
@@ -221,6 +231,9 @@ public class MyServer extends Server {
                         break;
                     case "ping":
                         CMDping(args, client);
+                        break;
+                    case "open":
+                        CMDopen(args, client);
                         break;
                     default:
                         send(client.ip, client.port, "Kein valider Befehl. Benutze \"HELP\" für eine Liste validen Befehle.");
@@ -249,8 +262,11 @@ public class MyServer extends Server {
             case "ping":
                 send(client.ip, client.port, ping.description);
                 break;
+            case "open":
+                send(client.ip, client.port, open.description);
+                break;
             case "":
-            // XXX Auslagern in printlCommands() Mehtode. Braucht natürlich neue Liste lCommands.
+            // TODO Auslagern in printlCommands() Mehtode. Braucht natürlich neue Liste lCommands.
                 client.state = "inHelpMenu";
                 String listCommands = "\nNr. | Befehl\n----------------\n0   | \"HELP\"\n1   | \"NICK\"\n2   | \"PRIVMSG\"\n3   | \"JOIN\"\n4   | \"PING\"\n\nAntworte mit der entsprechenden Nummer für eine kurze Erklärung.\nSyntax: \"HELP\" / \"HELP BEFEHL\"";
                 /*
@@ -276,6 +292,7 @@ public class MyServer extends Server {
         return;
     }
 
+    // XXX Unvalide Zeichen?
     public void CMDnick(String args, SClient client) {
         System.err.println("\"NICK\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
         if(args != null && !args.isEmpty()) {
@@ -315,7 +332,7 @@ public class MyServer extends Server {
         System.err.println("\"JOIN\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
         switch(args) {
             case "":
-                send(client.ip, client.port, printlPublicChatrooms());
+                send(client.ip, client.port, printPublicChatrooms());
             default: // XXX Was wenn noch weitere ungültige Parameter mitgegeben werden? Z.B.: "JOIN Lobby sdlfskjfd 98zwehd"
                 if(inlChatrooms(args)) {
                     Chatroom cr = getChatroom(args);
@@ -332,25 +349,57 @@ public class MyServer extends Server {
         return;
     }
 
-    // XXX Funktioniert noch nicht! (siehe Kommentare)
+    // XXX Rückmeldung bei unvaliden Zeichen im Namen nicht fertig.
     public void CMDopen(String args, SClient client) {
         System.err.println("\"OPEN\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
-        /*
-        Es muss überprüft werden, ob nach dem ersten " " in args (sofern vorhanden) "priv" steht. Was wenn (nicht)?
-        */
-        if(args.substring(args.indexOf(" ")) != -1) // args = "Name PRIV" => this = "priv" || args = "Name" => this = !!!!! NICHT GEWOLLT !!!!! "name"
-        switch(args.substring(args.indexOf(" ")+1).toLowerCase()) {
-            case "priv":
-
-        }
-        if(getChatroom(args) == null) { // XXX "priv"? (Annahme hier erstmal: priv steht nicht dabei) && Namen überprüfen auf ungültige Zeichen?
-            Chatroom cr = new Chatroom(args);
-            lChatrooms.append(cr);
-            lPublicChatrooms.append(cr);
-            CMDjoin(args, client);
+        String[] args_arr = args.split(" ");
+        if (args_arr.length < 1 || !args_arr[0].matches("[a-zäöüA-ZÄÖÜß0-9]{1,40}")) { // es ist kein (valider) name angegeben
+            String reply = "Der angegebene Name entspricht nicht den/der folgenden Konvention(en):";
+            int n = 0; // Anzahl der gefundenen Verstöße gegen die Konventionen.
+            if(args_arr.length < 1) {
+                //TODO
+            } else {
+                String name = args_arr[0];
+                if(name.length() > 40) { // name zu lang?
+                    reply += "\n" + ++n + ". Der Name darf maximal 40 Zeichen lang sein.";
+                }
+                if(!name.matches("[a-zäöüA-ZÄÖÜß0-9]*")) { // Enthält name unvalide Zeichen?
+                    reply += "\n" + ++n + ". Der Name darf nur Buchstaben (inklusive Umlaute) und Zahlen enthalten.";
+                }
+                if(n == 0) { // Darf nicht passieren, da unlogisch.
+                    System.err.println("ERROR CMDopen(): Keine unvaliden Zeichen gefunden. name=\"" + name + "\"");
+                    send(client.ip, client.port, "Entschuldigung, etwas ist schief gelaufen!");
+                }
+            }
+            send(client.ip, client.port, reply);
         } else {
-            send(client.ip, client.port, "Es existiert bereits ein Chatroom mit diesem Namen.");
+            String name = args_arr[0];
+            // String name = args; // Unrobust: Der Name in args darf kein Leerzeichen enthalten.
+            String parameter = ""; // Hier standardmäßige Parameterwerte angeben.
+            // if(args.indexOf(" ") != -1) { // Es sind Leerzeichen bzw. Parameter in args angegeben.
+            //     name = args.substring(0, args.indexOf(" ")); // Unrobust: Die Parameter dürfen nicht falsch angegeben sein. (Glaub ich)
+            //     parameter = args.substring(args.indexOf(" ")+1).toLowerCase();
+            // }
+            
+            if(getChatroom(name) == null) { // Existiert bereits ein Chatroom unter dem Namen name?
+                if(args_arr.length > 1) { // Mind. ein Parameter wurde angegeben.
+                    if(args_arr[1].toLowerCase().equals("priv")) { // Was ist als erster Parameter angegeben? Kann im Moment nur "priv" sein, später gibt es vielleicht mehr.
+                        parameter += "private";
+                    } else {
+                        // Der angegebene erste Parameter entspricht keiner validen Möglichkeit.
+                        send(client.ip, client.port, "\"" + args_arr[1] + "\" ist kein valider Parameter. Benutze \"HELP JOIN\" für eine kurze Erklärung des Befehls.");
+                    }
+                } else {
+                    parameter += "public";
+                }
+                Chatroom cr = new Chatroom(name, parameter);  // Es wird ein privater neuer Chatroom erstellt.
+                lChatrooms.append(cr);
+                CMDjoin(name, client);
+            } else {
+                send(client.ip, client.port, "Es existiert bereits ein Chatroom unter dem Namen \"" + name + "\".");
+            }
         }
+        return;
     }
 
     public void CMDping(String args, SClient client) {
@@ -424,11 +473,13 @@ public class MyServer extends Server {
         return null;
     }
     
-    private String printlPublicChatrooms() {
+    private String printPublicChatrooms() {
         String l = "\nNr. | Chatroom\n------------------------";
         int i = 0;
-        for(lPublicChatrooms.toFirst(); lPublicChatrooms.hasAccess(); lPublicChatrooms.next()) {
-            l += "\n" + i + "   | \"" + lPublicChatrooms.getContent().name + "\"";
+        for(lChatrooms.toFirst(); lChatrooms.hasAccess(); lChatrooms.next()) {
+            if(lChatrooms.getContent().kind.equals("public")) {
+                l += "\n" + i + "   | \"" + lChatrooms.getContent().name + "\"";
+            }
         }
         l += "\n\nAntworte mit der entsprechenden Nummer für ein paar Infos zum Chatroom.";
         /*
@@ -458,8 +509,22 @@ public class MyServer extends Server {
         return false;
     }
 
+    private String tmpContains(String str, String key) {
+        if(str.indexOf(key) > -1) {
+            return str;
+        }
+        return "";
+    }
+
     @Override
     public void send(String pClientIP, int pClientPort, String pMessage) {
         super.send(pClientIP, pClientPort, pMessage.replace("\n", "\\n"));
+    }
+
+    private <T> boolean contains(T[] arr, T target) {
+        for(T item : arr) {
+            if(item.equals(target)) return true;
+        }
+        return false;
     }
 }
