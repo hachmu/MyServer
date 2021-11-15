@@ -1,14 +1,11 @@
-import java.text.ParseException;
 import java.util.concurrent.Semaphore;
 
-import javax.swing.table.DefaultTableCellRenderer;
-
 public class MyServer extends Server {
+    private Semaphore mutex = new Semaphore(1);
     public static void main(String[] args) {
         MyServer server = new MyServer();
         MyClient client = new MyClient();
     }
-    private Semaphore mutex = new Semaphore(1);
     
     private class SClient {
         public String ip;
@@ -17,13 +14,14 @@ public class MyServer extends Server {
         public int id;
         public String state = "";
         // public String rank = "none";
-        public Chatroom currentChatroom;
+        public Chatroom currentChatroom = lobby;
         
         public SClient(String pIP, int pPort, int pID) {
             ip = pIP;
             port = pPort;
             id = pID;
             nick = "User" + id; // rank als Teil des Nicks? Z.B.: "[ADMIN]UserX" / "[ADMIN] UserX"
+            lobby.lClientsInRoom.append(this);
         }
     }
     
@@ -45,10 +43,13 @@ public class MyServer extends Server {
     }
     
     private class Command {
+        public String name;
         public String description;
         
-        public Command(String pDescription) {
+        public Command(String pName, String pDescription) {
+            name = pName;
             description = pDescription;
+            lCommands.append(this);
         }
     }
 
@@ -74,51 +75,61 @@ public class MyServer extends Server {
 
     List<SClient> lClients = new List<SClient>();
     List<Chatroom> lChatrooms = new List<Chatroom>();
+    List<Command> lCommands = new List<Command>();
     int clientCounter = 0;
     String hr = "\n----------------------------------";
-    Command help = new Command("Eine Liste aller validen Befehle.\nTipp: Kombiniere \"HELP\" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.\nSyntax: \"HELP\" / \"HELP BEFEHL\"");
+    Chatroom lobby = new Chatroom("Lobby", "public");
+    Command help = new Command("help", "Eine Liste aller validen Befehle.\nTipp: Kombiniere \"HELP\" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.\nSyntax: \"HELP [BEFEHL]\"");
     /*
     String description = """
     Eine Liste aller validen Befehle.
     Tipp: Kombiniere "HELP" mit einem anderen Befehl, um direkt eine kurze Erklärung zu erhalten.
-    Syntax: "HELP" / "HELP BEFEHL"
+    Syntax: "HELP [BEFEHL]"
     """;
     */
-    Command nick = new Command("Ändert den Namen, unter dem andere Nutzer deine Nachrichten erhalten.\nSyntax: \"NICK NEUER_NICKNAME\"");
+    Command nick = new Command("nick", "Ändert den Namen, unter dem andere Nutzer deine Nachrichten erhalten.\nTipp: Schreibe nur \"NICK\", um deinen aktuellen Nicknamen zu erfahren.\nSyntax: \"NICK [NEUER_NICKNAME]\"");
     /*
     String description = """
     Ändert den Namen, unter dem andere Nutzer deine Nachrichten erhalten.
-    Syntax: "NICK NEUER_NICKNAME"
+    Tipp: Schreibe nur "NICK", um deinen aktuellen Nicknamen zu erfahren.
+    Syntax: "NICK [NEUER_NICKNAME]"
     """;
     */
-    Command privmsg = new Command("Sendet eine Nachricht an eine bestimmte Zielperson.\nSyntax: \"PRIVMSG ZIEL :NACHRICHT\"");
+    Command privmsg = new Command("privmsg", "Sendet eine Nachricht an eine bestimmte Zielperson.\nSyntax: \"PRIVMSG ZIEL :NACHRICHT\"");
     /*
     String description = """
     Sendet eine Nachricht an eine bestimmte Zielperson.
     Syntax: "PRIVMSG ZIEL :NACHRICHT"
     """;
     */
-    Command join = new Command("Lässt dich dem angegebenen Chatroom beitreten.\nWichtig: Du kannst immer nur in einem Chatroom gleichzeitig sein.\n         Du verlässt dadurch also automatisch den vorherigen Chatroom.\nTipp: Schreibe nur \"JOIN\", um eine Liste aller öffentlichen Chatrooms zu erhalten.\nSyntax: \"JOIN CHATROOM\"");
+    Command join = new Command("join", "Lässt dich dem angegebenen Chatroom beitreten.\nWichtig: Du kannst immer nur in einem Chatroom gleichzeitig sein.\n         Du verlässt dadurch also automatisch den vorherigen Chatroom.\nTipp: Schreibe nur \"JOIN\", um eine Liste aller öffentlichen Chatrooms zu erhalten.\nSyntax: \"JOIN [CHATROOM]\"");
     /*
     String description = """
     Lässt dich dem angegebenen Chatroom beitreten. 
     Wichtig: Du kannst immer nur in einem Chatroom gleichzeitig sein. 
              Du verlässt dadurch also automatisch den vorherigen Chatroom.
     Tipp: Schreibe nur "JOIN", um eine Liste aller öffentlichen Chatrooms zu erhalten.
-    Syntax: "JOIN CHATROOM" / "JOIN"
+    Syntax: "JOIN [CHATROOM]"
     """;
     */
-    Command open = new Command("Eröffnet einen neuen Chatroom mit dem angegebenen Namen.\nWichtig: Du trittst diesem automatisch bei und verlässt den vorherigen Chatroom.\nTipp: Schreibe \"PRIV\" als zusätzliches Argument, um einen privaten Chatroom zu erstellen.\n      Dieser wird in keiner öffentlichen Liste stehen.\nSyntax: \"OPEN NAME\" / \"OPEN NAME PRIV\"");
+    Command open = new Command("open", "Eröffnet einen neuen Chatroom mit dem angegebenen Namen.\nWichtig: Du trittst diesem automatisch bei und verlässt den vorherigen Chatroom.\nTipp: Schreibe \"PRIV\" als zusätzliches Argument, um einen privaten Chatroom zu erstellen.\n      Dieser wird in keiner öffentlichen Liste stehen.\nSyntax: \"OPEN NAME [PRIV]\"");
     /*
     String description = """
     Eröffnet einen neuen Chatroom mit dem angegebenen Namen. 
     Wichtig: Du trittst diesem automatisch bei und verlässt den vorherigen Chatroom.
     Tipp: Schreibe "PRIV" als zusätzliches Argument, um einen privaten Chatroom zu erstellen. 
           Dieser wird in keiner öffentlichen Liste stehen.
-    Syntax: "OPEN NAME" / "OPEN NAME PRIV"
+    Syntax: "OPEN NAME [PRIV]"
     """;
     */
-    Command ping = new Command("Gibt deinen aktuellen Ping zurück...oder?\nSyntax: \"PING\"");
+    Command msg = new Command("msg", "Sendet eine Nachricht in deinen aktuellen Chatroom.\nSyntax: \"MSG :NACHRICHT\"");
+    /*
+    String description = """
+    Sendet eine Nachricht in deinen aktuellen Chatroom.
+    Syntax: "MSG :NACHRICHT"
+    """
+    */
+    Command ping = new Command("ping", "Gibt deinen aktuellen Ping zurück...oder?\nSyntax: \"PING\"");
     /*
     String description = """
     Gibt deinen aktuellen Ping zurück...oder?
@@ -128,8 +139,7 @@ public class MyServer extends Server {
 
     public MyServer() {
         super(1025);
-        // XXX Per open() besser.
-        Chatroom lobby = new Chatroom("Lobby", "public");
+        // XXX Per CMDopen() besser, braucht aber client, der hier nicht existiert.
         lChatrooms.append(lobby);
     }
 
@@ -164,6 +174,7 @@ public class MyServer extends Server {
         Wird dann automatisch default ausgeführt? Wenn ja, kann man so dafür sorgen, dass man auch im helpMenu die normalen Befehle ausführen kann, ohne diese als cases doppelt im Quellcode zu haben.
         Man müsste allerdings noch etwas die jeweiligen defaults anpassen, damit in den richtigen Momenten auch immer noch die richtigen Fehlermeldungen/Antworten kommen, 
         bzw. die richtigen weiteren Prozesse ausgeführt werden.
+        XXX Nicht redundante Implementierung.
         */
         switch(client.state) {
             case "inHelpMenu":
@@ -181,10 +192,13 @@ public class MyServer extends Server {
                         send(client.ip, client.port, join.description);
                         break;
                     case "4":
-                        send(client.ip, client.port, ping.description);
+                        send(client.ip, client.port, open.description);
                         break;
                     case "5":
-                        send(client.ip, client.port, open.description);
+                        send(client.ip, client.port, msg.description);
+                        break;
+                    case "6":
+                        send(client.ip, client.port, ping.description);
                         break;
                     case "help":
                         client.state = "";
@@ -202,13 +216,17 @@ public class MyServer extends Server {
                         client.state = "";
                         CMDjoin(args, client);
                         break;
-                    case "ping":
-                        client.state = ""; 
-                        CMDping(args, client);
-                        break;
                     case "open":
                         client.state = ""; 
                         CMDopen(args, client);
+                        break;
+                    case "msg":
+                        client.state = "";
+                        CMDmsg(args, client);
+                        break;
+                    case "ping":
+                        client.state = ""; 
+                        CMDping(args, client);
                         break;
                     default:
                         send(client.ip, client.port, "Es existiert kein Befehl mit dieser Nummer.");
@@ -229,11 +247,14 @@ public class MyServer extends Server {
                     case "join":
                         CMDjoin(args, client);
                         break;
-                    case "ping":
-                        CMDping(args, client);
-                        break;
                     case "open":
                         CMDopen(args, client);
+                        break;
+                    case "msg":
+                        CMDmsg(args, client);
+                        break;
+                    case "ping":
+                        CMDping(args, client);
                         break;
                     default:
                         send(client.ip, client.port, "Kein valider Befehl. Benutze \"HELP\" für eine Liste validen Befehle.");
@@ -259,31 +280,18 @@ public class MyServer extends Server {
             case "join":
                 send(client.ip, client.port, join.description);
                 break;
-            case "ping":
-                send(client.ip, client.port, ping.description);
-                break;
             case "open":
                 send(client.ip, client.port, open.description);
                 break;
+            case "msg":
+                send(client.ip, client.port, msg.description);
+                break;
+            case "ping":
+                send(client.ip, client.port, ping.description);
+                break;
             case "":
-            // TODO Auslagern in printlCommands() Mehtode. Braucht natürlich neue Liste lCommands.
                 client.state = "inHelpMenu";
-                String listCommands = "\nNr. | Befehl\n----------------\n0   | \"HELP\"\n1   | \"NICK\"\n2   | \"PRIVMSG\"\n3   | \"JOIN\"\n4   | \"PING\"\n\nAntworte mit der entsprechenden Nummer für eine kurze Erklärung.\nSyntax: \"HELP\" / \"HELP BEFEHL\"";
-                /*
-                String listCommands =  """
-
-                Nr. | Befehl
-                ------------------------
-                0   | "HELP"
-                1   | "NICK"
-                2   | "PRIVMSG"
-                3   | "JOIN"
-                4   | "PING"
-
-                Antworte mit der entprechenden Nummer für eine kurze Erklärung.
-                """;
-                */
-                send(client.ip, client.port, listCommands);
+                send(client.ip, client.port, printlCommands());
                 break;
             default:
                 send(client.ip, client.port, "\"" + args + "\" ist kein valider Befehl. Benutze \"HELP\" für eine Liste aller validen Befehle.");
@@ -305,6 +313,7 @@ public class MyServer extends Server {
         return;
     }
 
+    // XXX man soll sich nicht selber schreiben können.
     public void CMDprivmsg(String args, SClient client) {
         System.err.println("\"PRIVMSG\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
         String ziel = args.substring(0, args.indexOf(" "));
@@ -328,6 +337,7 @@ public class MyServer extends Server {
         return;
     }
 
+    // XXX nur "join"?
     public void CMDjoin(String args, SClient client) {
         System.err.println("\"JOIN\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
         switch(args) {
@@ -349,16 +359,16 @@ public class MyServer extends Server {
         return;
     }
 
-    // XXX Rückmeldung bei unvaliden Zeichen im Namen nicht fertig.
+    // XXX "UserX ist beigetreten" kommt doppelt.
     public void CMDopen(String args, SClient client) {
         System.err.println("\"OPEN\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
         String[] args_arr = args.split(" ");
         if (args_arr.length < 1 || !args_arr[0].matches("[a-zäöüA-ZÄÖÜß0-9]{1,40}")) { // es ist kein (valider) name angegeben
-            String reply = "Der angegebene Name entspricht nicht den/der folgenden Konvention(en):";
-            int n = 0; // Anzahl der gefundenen Verstöße gegen die Konventionen.
             if(args_arr.length < 1) {
-                //TODO
+                send(client.ip, client.port, "Du musst einen Name angeben. Benutze \"HELP OPEN\" für eine kurze Erklärung des Befehls.");
             } else {
+                String reply = "Der angegebene Name entspricht nicht den/der folgenden Konvention(en):";
+                int n = 0; // Anzahl der gefundenen Verstöße gegen die Konventionen.
                 String name = args_arr[0];
                 if(name.length() > 40) { // name zu lang?
                     reply += "\n" + ++n + ". Der Name darf maximal 40 Zeichen lang sein.";
@@ -369,18 +379,13 @@ public class MyServer extends Server {
                 if(n == 0) { // Darf nicht passieren, da unlogisch.
                     System.err.println("ERROR CMDopen(): Keine unvaliden Zeichen gefunden. name=\"" + name + "\"");
                     send(client.ip, client.port, "Entschuldigung, etwas ist schief gelaufen!");
+                    return;
                 }
+                send(client.ip, client.port, reply);
             }
-            send(client.ip, client.port, reply);
         } else {
-            String name = args_arr[0];
-            // String name = args; // Unrobust: Der Name in args darf kein Leerzeichen enthalten.
-            String parameter = ""; // Hier standardmäßige Parameterwerte angeben.
-            // if(args.indexOf(" ") != -1) { // Es sind Leerzeichen bzw. Parameter in args angegeben.
-            //     name = args.substring(0, args.indexOf(" ")); // Unrobust: Die Parameter dürfen nicht falsch angegeben sein. (Glaub ich)
-            //     parameter = args.substring(args.indexOf(" ")+1).toLowerCase();
-            // }
-            
+            String name = args_arr[0]; // Unrobust: Der Name in args darf kein Leerzeichen enthalten.
+            String parameter = "";
             if(getChatroom(name) == null) { // Existiert bereits ein Chatroom unter dem Namen name?
                 if(args_arr.length > 1) { // Mind. ein Parameter wurde angegeben.
                     if(args_arr[1].toLowerCase().equals("priv")) { // Was ist als erster Parameter angegeben? Kann im Moment nur "priv" sein, später gibt es vielleicht mehr.
@@ -393,12 +398,21 @@ public class MyServer extends Server {
                     parameter += "public";
                 }
                 Chatroom cr = new Chatroom(name, parameter);  // Es wird ein privater neuer Chatroom erstellt.
+                cr.lClientsInRoom.append(client); // Fügt den Ersteller des Chatrooms als Client im Chatroom hinzu.
                 lChatrooms.append(cr);
+                send(client.ip, client.port, "Neuer Chatroom \"" + name + "\" erstellt.");
                 CMDjoin(name, client);
             } else {
                 send(client.ip, client.port, "Es existiert bereits ein Chatroom unter dem Namen \"" + name + "\".");
             }
         }
+        return;
+    }
+
+    public void CMDmsg(String args, SClient client) {
+        System.err.println("\"MSG\"-Befehl aufgerufen: " + client.nick + "(" + client.id + ")@" + client.ip + ":" + client.port);
+        String message = args.substring(args.indexOf(":")+1);
+        client.currentChatroom.sendToChatroom(client.nick + ": " + message);
         return;
     }
 
@@ -466,7 +480,7 @@ public class MyServer extends Server {
 
     private Chatroom getChatroom(String pName) {
         for(lChatrooms.toFirst(); lChatrooms.hasAccess(); lChatrooms.next()) {
-            if(lChatrooms.getContent().name == pName) {
+            if(lChatrooms.getContent().name.equals(pName)) {
                 return lChatrooms.getContent();
             }
         }
@@ -478,10 +492,9 @@ public class MyServer extends Server {
         int i = 0;
         for(lChatrooms.toFirst(); lChatrooms.hasAccess(); lChatrooms.next()) {
             if(lChatrooms.getContent().kind.equals("public")) {
-                l += "\n" + i + "   | \"" + lChatrooms.getContent().name + "\"";
+                l += "\n" + i++ + "   | \"" + lChatrooms.getContent().name + "\"";
             }
         }
-        l += "\n\nAntworte mit der entsprechenden Nummer für ein paar Infos zum Chatroom.";
         /*
         String l = """
         
@@ -493,8 +506,31 @@ public class MyServer extends Server {
         .   |   .
         .   |   .
         .   |   .
-        
-        Antworte mit der entsprechenden Nummer für ein paar Infos zum Chatroom.
+        """;
+        */
+        return l;
+    }
+
+    private String printlCommands() {
+        String l = "\nNr. | Befehl\n------------------------";
+        int i = 0;
+        for(lCommands.toFirst(); lCommands.hasAccess(); lCommands.next()) {
+            l += "\n" + i++ + "   | \"" + lCommands.getContent().name + "\"";
+        }
+        l += "\n\nAntworte mit der entprechenden Nummer für eine kurze Erklärung.";
+        /*
+        String listCommands =  """
+
+        Nr. | Befehl
+        ------------------------
+        0   | "HELP"
+        1   | "NICK"
+        2   | "PRIVMSG"
+        .   |   .
+        .   |   .
+        .   |   .
+
+        Antworte mit der entprechenden Nummer für eine kurze Erklärung.
         """;
         */
         return l;
@@ -508,23 +544,17 @@ public class MyServer extends Server {
         }
         return false;
     }
-
-    private String tmpContains(String str, String key) {
-        if(str.indexOf(key) > -1) {
-            return str;
-        }
-        return "";
-    }
+    
+    // private <T> boolean contains(T[] arr, T target) {
+    //     for(T item : arr) {
+    //         if(item.equals(target)) return true;
+    //     }
+    //     return false;
+    // }
 
     @Override
     public void send(String pClientIP, int pClientPort, String pMessage) {
         super.send(pClientIP, pClientPort, pMessage.replace("\n", "\\n"));
     }
 
-    private <T> boolean contains(T[] arr, T target) {
-        for(T item : arr) {
-            if(item.equals(target)) return true;
-        }
-        return false;
-    }
 }
